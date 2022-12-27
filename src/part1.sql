@@ -1,4 +1,3 @@
-
 /* sed -i 's/,/./g' Transactions.tsv      (Linux only) */
 
 drop table if exists personal_data, cards, transactions, groups_sku, 
@@ -75,15 +74,26 @@ begin
 end;
 $$ language plpgsql;
 
-call import_data('personal_data', E'\t');
-call import_data('cards', E'\t');
+drop procedure if exists import_data_mini(varchar, char);
+create procedure import_data_mini(tablename varchar, delimeter char)
+as $$
+begin
+    execute format('COPY %s FROM %L DELIMITER %L CSV', tablename, (select path_name() || tablename || '_mini.tsv'),
+                   delimeter);
+end;
+$$ language plpgsql;
+
+
+call import_data_mini('personal_data', E'\t');
+call import_data_mini('cards', E'\t');
 
 set datestyle to iso, DMY; 
 --  Query:select '12/19/2016'::date Output: "2016-12-19"
 
-call import_data('transactions', E'\t');
-call import_data('groups_sku', E'\t');
+call import_data_mini('transactions', E'\t');
+call import_data_mini('groups_sku', E'\t');
+call import_data_mini('sku', E'\t');
+call import_data_mini('checks', E'\t');
+call import_data_mini('stores', E'\t');
+
 call import_data('date_of_analysis_formation', E'\t');
-call import_data('sku', E'\t');
-call import_data('checks', E'\t');
-call import_data('stores', E'\t');
