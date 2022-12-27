@@ -5,10 +5,10 @@ drop table if exists personal_data, cards, transactions, groups_sku,
 
 create table personal_data (
     customer_id bigint primary key,
-	customer_name varchar not null,
-	customer_surname varchar not null,
-	customer_primary_email varchar not null,
-	customer_primary_phone varchar not null
+	customer_name varchar, -- check (customer_name ~ '^[A-Z]{1}+[a-z]'),
+	customer_surname varchar,
+	customer_primary_email varchar check (customer_primary_email ~ '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$'),
+	customer_primary_phone varchar check (customer_primary_phone ~ '^[+][7][0-9]{10}')
 );
 
 create table cards (
