@@ -29,12 +29,12 @@ create table cards (
 
 create table groups_sku (
     group_id bigint primary key,
-    group_name varchar check (group_name ~ '^[A-ZА-Яa-zа-яё0-9\[\]\\\^\$\.\|\?\*\+\(\)]+$')
+    group_name varchar check (group_name ~ '^[A-ZА-Яa-zа-яё0-9 -\[\]\\\^\$\.\|\?\*\+\(\)]+$')
 );
 
 create table sku (
     sku_id bigint primary key,
-	sku_name varchar check (sku_name ~ '^[A-ZА-Яa-zа-яё0-9\[\]\\\^\$\.\|\?\*\+\(\)]+$'),
+	sku_name varchar check (sku_name ~ '^[A-ZА-Яa-zа-яё0-9 -\[\]\\\^\$\.\|\?\*\+\(\)]+$'),
     group_id bigint not null references groups_sku(group_id)
 );
 
@@ -66,8 +66,6 @@ create table date_of_analysis_formation (
     analysis_formation timestamp
 );
 
-
-
 drop procedure if exists import_data(varchar, char);
 create procedure import_data(tablename varchar, delimeter char)
 as $$
@@ -82,7 +80,7 @@ create procedure import_data_mini(tablename varchar, delimeter char)
 as $$
 begin
     execute format('COPY %s FROM %L DELIMITER %L CSV', tablename, 
-	(select path_name() ||'datasets/'|| tablename || '_mini.tsv'), delimeter);
+	(select path_name() ||'datasets/'|| tablename || '_Mini.tsv'), delimeter);
 end;
 $$ language plpgsql;
 
@@ -97,27 +95,27 @@ $$ language plpgsql;
 
 
 set datestyle to iso, DMY; 
-call import_data('date_of_analysis_formation', E'\t');
+call import_data('Date_Of_Analysis_Formation', E'\t');
 
 /* import_mini */
 
-call import_data_mini('personal_data', E'\t');
-call import_data_mini('cards', E'\t');
-call import_data_mini('transactions', E'\t');
-call import_data_mini('groups_sku', E'\t');
-call import_data_mini('sku', E'\t');
-call import_data_mini('checks', E'\t');
-call import_data_mini('stores', E'\t');
+-- call import_data_mini('Personal_Data', E'\t');
+-- call import_data_mini('Cards', E'\t');
+-- call import_data_mini('Transactions', E'\t');
+-- call import_data_mini('Groups_SKU', E'\t');
+-- call import_data_mini('SKU', E'\t');
+-- call import_data_mini('Checks', E'\t');
+-- call import_data_mini('Stores', E'\t');
 
 /* import */
 
--- call import_data('personal_data', E'\t');
--- call import_data('cards', E'\t');
--- call import_data('transactions', E'\t');
--- call import_data('groups_sku', E'\t');
--- call import_data('sku', E'\t');
--- call import_data('checks', E'\t');
--- call import_data('stores', E'\t');
+call import_data('Personal_Data', E'\t');
+call import_data('Cards', E'\t');
+call import_data('Transactions', E'\t');
+call import_data('Groups_SKU', E'\t');
+call import_data('SKU', E'\t');
+call import_data('Checks', E'\t');
+call import_data('Stores', E'\t');
 
 /* export */
 
@@ -128,7 +126,4 @@ call export_data('groups_sku', E'\t');
 call export_data('sku', E'\t');
 call export_data('checks', E'\t');
 call export_data('stores', E'\t');
-
-
-
---  SELECT SESSION_USER, CURRENT_USER;
+call export_data('date_of_analysis_formation', E'\t');
