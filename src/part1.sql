@@ -7,7 +7,7 @@
 drop function if exists path_name();
 create function path_name() returns varchar as
 $$
-select '/home/natalia/School/SQL3_RetailAnalitycs_v1.0-0/';
+select '/home/darika/retail/';
 $$ language sql;
 
 
