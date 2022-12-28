@@ -36,4 +36,4 @@ group by
     customer_id
   , transaction_id
   , transaction_datetime
-  , group_id
+  , group_id;
