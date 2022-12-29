@@ -130,7 +130,7 @@ BEGIN
     INSERT INTO temp_table VALUES (16, 'Medium', 'Often', 'Low');
     INSERT INTO temp_table VALUES (17, 'Medium', 'Often', 'Medium');
     INSERT INTO temp_table VALUES (18, 'Medium', 'Often', 'High');
-    INSERT INTO temp_table VALUES (19, 'Medium', 'Rarely', 'Low');
+    INSERT INTO temp_table VALUES (19, 'High', 'Rarely', 'Low');
     INSERT INTO temp_table VALUES (20, 'High', 'Rarely', 'Medium');
     INSERT INTO temp_table VALUES (21, 'High', 'Rarely', 'High');
     INSERT INTO temp_table VALUES (22, 'High', 'Occasionally', 'Low');
@@ -146,8 +146,85 @@ $$ LANGUAGE plpgsql;
 
 
 
-DROP VIEW IF EXISTS customers;
-CREATE VIEW customers AS
+DROP FUNCTION IF EXISTS stores_cte() CASCADE;
+CREATE FUNCTION stores_cte()
+    RETURNS table
+            (
+                customer_id            bigint,
+                customer_primary_store bigint
+            )
+AS
+$$
+DECLARE
+BEGIN
+    RETURN QUERY
+        WITH all_transactions AS (SELECT DISTINCT pd.customer_id,
+                                                  t.transaction_store_id,
+                                                  COUNT(transaction_id) OVER
+                                                      (PARTITION BY pd.customer_id, t.transaction_store_id) AS per_store,
+                                                  MAX(t.transaction_datetime)
+                                                  OVER (PARTITION BY pd.customer_id, t.transaction_store_id)   max_time
+                                  FROM personal_data pd
+                                           LEFT JOIN cards c ON pd.customer_id = c.customer_id
+                                           LEFT JOIN transactions t ON c.customer_card_id = t.customer_card_id
+                                  ORDER BY 1),
+             percent_per_store AS (SELECT at.customer_id,
+                                          at.transaction_store_id,
+                                          at.max_time,
+                                          (CASE
+                                               WHEN at.per_store = 0 THEN 0
+                                               ELSE ROUND((at.per_store / (SUM(at.per_store) OVER
+                                                   (PARTITION BY at.customer_id)))::decimal, 2) END) AS store_val
+                                   FROM all_transactions at),
+             max_per_store AS (SELECT pp.customer_id,
+                                      pp.transaction_store_id,
+                                      pp.max_time,
+                                      pp.store_val,
+                                      RANK() OVER (PARTITION BY pp.customer_id
+                                          ORDER BY pp.store_val DESC, pp.max_time DESC) max_store
+                               FROM percent_per_store pp),
+             ranked_stores AS (SELECT pd.customer_id,
+                                      t.transaction_store_id,
+                                      t.transaction_datetime,
+                                      RANK() OVER (PARTITION BY pd.customer_id
+                                          ORDER BY t.transaction_datetime DESC) AS last_stores,
+                                      LAG(transaction_store_id) OVER ( PARTITION BY pd.customer_id
+                                          ORDER BY t.transaction_datetime DESC) AS prev_store
+                               FROM personal_data pd
+                                        LEFT JOIN cards c ON pd.customer_id = c.customer_id
+                                        LEFT JOIN transactions t ON c.customer_card_id = t.customer_card_id
+                               ORDER BY 1),
+             max_three_stores AS (SELECT rs.customer_id,
+                                         rs.transaction_store_id,
+                                         rs.transaction_datetime,
+                                         SUM(CASE
+                                                 WHEN rs.transaction_store_id = prev_store
+                                                     THEN 0
+                                                 ELSE 1 END) OVER (PARTITION BY rs.customer_id
+                                             ORDER BY rs.customer_id, rs.transaction_datetime) check_col
+                                  FROM ranked_stores rs
+                                  WHERE last_stores <= 3),
+             final AS (SELECT mts.customer_id,
+                              (CASE
+                                   WHEN SUM(mts.check_col) OVER
+                                       (PARTITION BY mts.customer_id) = 3 THEN
+                                       MAX(mts.transaction_store_id) OVER (PARTITION BY mts.customer_id)
+                                   ELSE COALESCE(q.transaction_store_id, 0) END) store
+                       FROM max_three_stores mts
+                                JOIN (SELECT * FROM max_per_store mps WHERE mps.max_store = 1) q
+                                     ON mts.customer_id = q.customer_id)
+        SELECT DISTINCT f.customer_id,
+                        f.store
+        FROM final f
+        ORDER BY 1;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT *
+FROM stores_cte();
+
+DROP MATERIALIZED VIEW IF EXISTS customers;
+CREATE MATERIALIZED VIEW customers AS
 WITH main AS (SELECT ch.customer_id,
                      ch.customer_average_check,
                      ch.customer_average_check_segment,
@@ -167,21 +244,36 @@ WITH main AS (SELECT ch.customer_id,
                                        WHEN customer_churn_rate <= 5 THEN 'Medium'
                                        ELSE 'High' END) AS customer_churn_segment
                            FROM main),
-     last_segment AS (SELECT cp.*,
-                             q.segment
+     last_segment AS (SELECT DISTINCT cp.customer_id,
+                                      cp.customer_average_check,
+                                      cp.customer_average_check_segment,
+                                      cp.customer_frequency,
+                                      cp.customer_frequency_segment,
+                                      cp.customer_inactive_period,
+                                      cp.customer_churn_rate,
+                                      cp.customer_churn_segment,
+                                      q.segment AS customer_segment
                       FROM churn_probability cp
                                JOIN (SELECT * FROM total_segment_cte()) q
-                                    ON cp.customer_average_check_segment = q.average_check AND
-                                       cp.customer_frequency_segment = q.frequency_purchases AND
-                                       cp.customer_churn_segment = q.ch_probability)
-
+                                    ON (cp.customer_average_check_segment = q.average_check AND
+                                        cp.customer_frequency_segment = q.frequency_purchases AND
+                                        cp.customer_churn_segment = q.ch_probability)),
+     fin AS (SELECT DISTINCT last_segment.customer_id,
+                             last_segment.customer_average_check,
+                             last_segment.customer_average_check_segment,
+                             last_segment.customer_frequency,
+                             last_segment.customer_frequency_segment,
+                             last_segment.customer_inactive_period,
+                             last_segment.customer_churn_rate,
+                             last_segment.customer_churn_segment,
+                             last_segment.customer_segment,
+                             q_last.customer_primary_store
+             FROM last_segment
+                      JOIN (SELECT * FROM stores_cte()) q_last ON
+                 last_segment.customer_id = q_last.customer_id)
 SELECT *
-FROM churn_probability;
+FROM fin;
 
--- SELECT pd.customer_id,
---        t.customer_card_id,
---        t.transaction_datetime
--- FROM personal_data pd
---          LEFT JOIN cards c ON pd.customer_id = c.customer_id
---          LEFT JOIN transactions t ON c.customer_card_id = t.customer_card_id
--- WHERE pd.customer_id = 652;
+
+SELECT COUNT(*)
+FROM customers;
