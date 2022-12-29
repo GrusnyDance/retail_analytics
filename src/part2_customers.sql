@@ -92,6 +92,60 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+DROP FUNCTION IF EXISTS total_segment_cte() CASCADE;
+CREATE FUNCTION total_segment_cte()
+    RETURNS table
+            (
+                segment             bigint,
+                average_check       varchar(30),
+                frequency_purchases varchar(30),
+                ch_probability      varchar(30)
+            )
+AS
+$$
+BEGIN
+    DROP TABLE IF EXISTS temp_table;
+    CREATE TABLE temp_table
+    (
+        segment             bigint,
+        average_check       varchar(30),
+        frequency_purchases varchar(30),
+        ch_probability      varchar(30)
+    );
+    INSERT INTO temp_table VALUES (1, 'Low', 'Rarely', 'Low');
+    INSERT INTO temp_table VALUES (2, 'Low', 'Rarely', 'Medium');
+    INSERT INTO temp_table VALUES (3, 'Low', 'Rarely', 'High');
+    INSERT INTO temp_table VALUES (4, 'Low', 'Occasionally', 'Low');
+    INSERT INTO temp_table VALUES (5, 'Low', 'Occasionally', 'Medium');
+    INSERT INTO temp_table VALUES (6, 'Low', 'Occasionally', 'High');
+    INSERT INTO temp_table VALUES (7, 'Low', 'Often', 'Low');
+    INSERT INTO temp_table VALUES (8, 'Low', 'Often', 'Medium');
+    INSERT INTO temp_table VALUES (9, 'Low', 'Often', 'High');
+    INSERT INTO temp_table VALUES (10, 'Medium', 'Rarely', 'Low');
+    INSERT INTO temp_table VALUES (11, 'Medium', 'Rarely', 'Medium');
+    INSERT INTO temp_table VALUES (12, 'Medium', 'Rarely', 'High');
+    INSERT INTO temp_table VALUES (13, 'Medium', 'Occasionally', 'Low');
+    INSERT INTO temp_table VALUES (14, 'Medium', 'Occasionally', 'Medium');
+    INSERT INTO temp_table VALUES (15, 'Medium', 'Occasionally', 'High');
+    INSERT INTO temp_table VALUES (16, 'Medium', 'Often', 'Low');
+    INSERT INTO temp_table VALUES (17, 'Medium', 'Often', 'Medium');
+    INSERT INTO temp_table VALUES (18, 'Medium', 'Often', 'High');
+    INSERT INTO temp_table VALUES (19, 'Medium', 'Rarely', 'Low');
+    INSERT INTO temp_table VALUES (20, 'High', 'Rarely', 'Medium');
+    INSERT INTO temp_table VALUES (21, 'High', 'Rarely', 'High');
+    INSERT INTO temp_table VALUES (22, 'High', 'Occasionally', 'Low');
+    INSERT INTO temp_table VALUES (23, 'High', 'Occasionally', 'Medium');
+    INSERT INTO temp_table VALUES (24, 'High', 'Occasionally', 'High');
+    INSERT INTO temp_table VALUES (25, 'High', 'Often', 'Low');
+    INSERT INTO temp_table VALUES (26, 'High', 'Often', 'Medium');
+    INSERT INTO temp_table VALUES (27, 'High', 'Often', 'High');
+    RETURN QUERY
+        SELECT * FROM temp_table;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 DROP VIEW IF EXISTS customers;
 CREATE VIEW customers AS
 WITH main AS (SELECT ch.customer_id,
@@ -112,7 +166,14 @@ WITH main AS (SELECT ch.customer_id,
                                        WHEN customer_churn_rate <= 2 THEN 'Low'
                                        WHEN customer_churn_rate <= 5 THEN 'Medium'
                                        ELSE 'High' END) AS customer_churn_segment
-                           FROM main)
+                           FROM main),
+     last_segment AS (SELECT cp.*,
+                             q.segment
+                      FROM churn_probability cp
+                               JOIN (SELECT * FROM total_segment_cte()) q
+                                    ON cp.customer_average_check_segment = q.average_check AND
+                                       cp.customer_frequency_segment = q.frequency_purchases AND
+                                       cp.customer_churn_segment = q.ch_probability)
 
 SELECT *
 FROM churn_probability;
