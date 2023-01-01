@@ -1,6 +1,6 @@
-create or replace view purchase_history as
-with main as (
-	select
+drop view if exists main;
+create view main as
+    select
 		cd.customer_id
 	  , tr.transaction_id
 	  , tr.transaction_datetime
@@ -22,8 +22,13 @@ with main as (
 		on sku.sku_id = ch.sku_id
 	  join stores as st
 		on st.transaction_store_id = tr.transaction_store_id
-		and st.sku_id = sku.sku_id)
-select
+		and st.sku_id = sku.sku_id;
+
+/* Purchase history View */
+
+drop view if exists purchase_history;
+create view purchase_history as
+    select
     customer_id as "Customer_ID"
   , transaction_id as "Transaction_ID"
   , transaction_datetime as "Transaction_DateTime"
@@ -37,3 +42,21 @@ group by
   , transaction_id
   , transaction_datetime
   , group_id;
+
+/* Periods View */
+
+drop view if exists periods;
+create view periods as
+select
+    customer_id as "Customer_ID"
+  , group_id as "Group_ID"
+  , min(transaction_datetime) as "First_Group_Purchase_Date"
+  , max(transaction_datetime) as "Last_Group_Purchase_Date"
+  , count(*) as "Group_Purchase"
+  , ((max(transaction_datetime)::date - min(transaction_datetime)::date) + 1)/ count(*) as "Group_Frequency"
+  , round(min(sku_discount/sku_summ), 2) as "Group_Min_Discount"
+from main
+group by
+    customer_id
+  , group_id;
+  
