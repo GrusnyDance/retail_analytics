@@ -45,7 +45,7 @@ group by
 
 /* Periods View */
 
-drop view if exists periods;
+drop view if exists periods cascade;
 create view periods as
 select
     customer_id as "Customer_ID"
@@ -54,7 +54,8 @@ select
   , max(transaction_datetime) as "Last_Group_Purchase_Date"
   , count(*) as "Group_Purchase"
   , ((max(transaction_datetime)::date - min(transaction_datetime)::date) + 1)/ count(*) as "Group_Frequency"
-  , round(min(sku_discount/sku_summ), 2) as "Group_Min_Discount"
+  , round(coalesce(min(case when sku_discount = 0 then null
+			  else sku_discount/sku_summ end), 0), 2) as "Group_Min_Discount"
 from main
 group by
     customer_id
