@@ -1,5 +1,5 @@
-drop view if exists main;
-create view main as
+drop materialized view if exists main cascade;
+create materialized view main as
     select
 		cd.customer_id
 	  , tr.transaction_id

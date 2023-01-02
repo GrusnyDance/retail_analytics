@@ -21,7 +21,7 @@ with group_name as (
 	select distinct
 		gv."Customer_ID" as customer_id
 	  , first_value(gsku.group_name) over (partition by gv."Customer_ID" order by gv."Group_Affinity_Index" desc) as gr_name
-	  , first_value(gv."Group_Margin") over (partition by gv."Customer_ID" order by gv."Group_Affinity_Index" desc) as gr_margin
+	  , first_value(gv."Group_Minimum_Discount") over (partition by gv."Customer_ID" order by gv."Group_Affinity_Index" desc) as depth_disc
 	from groups_view as gv
 	join groups_sku as gsku
 	  on gsku.group_id = gv."Group_ID"
@@ -35,7 +35,7 @@ select
   , case when cs.customer_frequency = 0 then add_trans
       else (round(in_interv::numeric/cs.customer_frequency, 0) + add_trans) end
   , gn.gr_name
-  , round(allow_margin_share/100 * gn.gr_margin , 2)
+  , (gn.depth_disc + 0.05) * 100
 from customers as cs
   join group_name as gn
     on cs.customer_id = gn.customer_id;
