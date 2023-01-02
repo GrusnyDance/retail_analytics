@@ -59,5 +59,40 @@ group by
   , group_id
 
 
+drop view if exists discount_share_min;
+create view discount_share_min as
+with discount_transaction as (
+	select
+		m.customer_id
+	  , m.group_id
+	  , count(distinct transaction_id) as qty_dis_tr
+	from main as m
+	where m.sku_discount > 0
+	group by
+		m.customer_id
+	  , m.group_id)  
+select
+    p."Customer_ID" as customer_id
+  , p."Group_ID" as group_id
+  , round(coalesce (dt.qty_dis_tr, 0)::numeric / p."Group_Purchase", 2) as group_discount_share
+  , p."Group_Min_Discount" as group_min_discount
+from discount_transaction as dt
+right join periods as p
+  on p."Customer_ID" = dt.customer_id
+  and p."Group_ID" = dt.group_id;
 
-  
+
+drop view if exists group_average_discount;
+create view group_average_discount as
+	select
+		"Customer_ID" as customer_id
+	  , "Group_ID" as group_id
+	  , round (sum("Group_Summ_Paid") / sum("Group_Summ") , 2) as group_average_discount
+	from purchase_history
+	group by
+		"Customer_ID"
+	  , "Group_ID";
+
+
+
+
