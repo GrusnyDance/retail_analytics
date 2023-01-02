@@ -94,5 +94,80 @@ create view group_average_discount as
 	  , "Group_ID";
 
 
+drop function if exists group_margin(int, int);
+create function group_margin(mode_margin int default 3, in_value int default 100) 
+returns table (customer_id bigint, group_id bigint, group_margin numeric)
+as $$
+begin
+if mode_margin = 1 then 
+  return query
+	select
+		"Customer_ID" as customer_id
+	  , "Group_ID" as group_id
+	  , sum("Group_Summ_Paid") - sum("Group_Cost") as group_margin
+	from purchase_history
+	where "Transaction_DateTime"::date >= 
+		((select * from date_of_analysis_formation order by 1 desc limit 1)::date - in_value)
+	group by
+		"Customer_ID"
+	  , "Group_ID";
+elsif mode_margin = 2 then
+   return query
+    select
+	    lph.customer_id
+	  , lph.group_id
+	  , sum(lph.margin) as group_margin
+	from (select
+		      "Customer_ID" as customer_id
+			, "Group_ID" as group_id
+			, "Group_Summ_Paid" - "Group_Cost" as margin
+		  from purchase_history
+		  order by "Transaction_DateTime" desc
+		  limit in_value) as lph
+	group by
+	    lph.customer_id
+	  , lph.group_id;
+else
+   return query
+	select
+		"Customer_ID" as customer_id
+	  , "Group_ID" as group_id
+	  , sum("Group_Summ_Paid") - sum("Group_Cost") as group_margin
+	from purchase_history
+	group by
+		"Customer_ID"
+	  , "Group_ID";
+end if;
+end;
+$$ language plpgsql;
 
 
+drop view if exists groups_view;
+create view groups_view as
+	select
+		gm.customer_id as "Customer_ID"
+	  , gm.group_id as "Group_ID"
+	  , ai.group_affinity_index as "Group_Affinity_Index"
+	  , cr.churn_rate as "Group_Churn_Rate"
+	  , si.stability_index as "Group_Stability_Index"
+	  , gm.group_margin as "Group_Margin"
+	  , dsm.group_discount_share as "Group_Discount_Share"
+	  , dsm.group_min_discount as "Group_Minimum_Discount"
+	  , gad.group_average_discount as "Group_Average_Discount"
+	from group_margin() as gm  /* group_margin(mode, in_value) mode 1 for period, mode 2 for qty. 
+	                                                           in_value - qty of days or transaction */
+	  join affinity_index as ai
+		on ai.customer_id = gm.customer_id
+		and ai.group_id = gm.group_id
+	  join churn_rate as cr
+		on cr.customer_id = gm.customer_id
+		and cr.group_id = gm.group_id
+	  join stability_index as si
+		on si.customer_id = gm.customer_id
+		and si.group_id = gm.group_id
+	  join discount_share_min as dsm
+		on dsm.customer_id = gm.customer_id
+		and dsm.group_id = gm.group_id
+	  join group_average_discount as gad
+		on gad.customer_id = gm.customer_id
+		and gad.group_id = gm.group_id;
