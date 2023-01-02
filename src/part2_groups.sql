@@ -1,5 +1,5 @@
-drop view if exists affinity_index;
-create view affinity_index as
+drop materialized view if exists affinity_index;
+create materialized view affinity_index as
 	select
 		 p."Customer_ID" as customer_id
 	   , p."Group_ID" as group_id
@@ -15,8 +15,8 @@ create view affinity_index as
 	  , p."Group_Purchase";
 
 
-drop view if exists churn_rate;
-create view churn_rate as
+drop materialized view if exists churn_rate;
+create materialized view churn_rate as
 	select
 		 p."Customer_ID" as customer_id
 	   , p."Group_ID" as group_id
@@ -33,8 +33,8 @@ create view churn_rate as
 	  , p."Group_Frequency";
 
 
-drop view if exists stability_index;
-create view stability_index as
+drop materialized view if exists stability_index;
+create materialized view stability_index as
 with stability_temp as (
 	select
 		ph."Customer_ID" as customer_id
@@ -56,11 +56,11 @@ select
 from stability_temp as st
 group by
     customer_id
-  , group_id
+  , group_id;
 
 
-drop view if exists discount_share_min;
-create view discount_share_min as
+drop materialized view if exists discount_share_min;
+create materialized view discount_share_min as
 with discount_transaction as (
 	select
 		m.customer_id
@@ -82,8 +82,8 @@ right join periods as p
   and p."Group_ID" = dt.group_id;
 
 
-drop view if exists group_average_discount;
-create view group_average_discount as
+drop materialized view if exists group_average_discount;
+create materialized view group_average_discount as
 	select
 		"Customer_ID" as customer_id
 	  , "Group_ID" as group_id
