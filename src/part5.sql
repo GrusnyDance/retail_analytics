@@ -1,7 +1,7 @@
 
 drop function if exists frequency_of_visits(timestamp, timestamp, bigint, numeric, numeric, numeric);
-create function frequency_of_visits(first_date timestamp default '2018-01-20 08:24:58',
-									 last_date timestamp default '2022-08-20 07:31:15',
+create function frequency_of_visits(first_date timestamp default '2023-02-01 08:24:58',
+									 last_date timestamp default '2023-08-25 07:31:15',
 									 add_trans bigint default 10,
 								     max_churn_index numeric default 10,
 								     max_disc_share numeric default 85,
@@ -33,7 +33,7 @@ select
   , first_date
   , last_date
   , case when cs.customer_frequency = 0 then add_trans
-      else (round(in_interv/cs.customer_frequency, 0) + add_trans) end
+      else (round(in_interv::numeric/cs.customer_frequency, 0) + add_trans) end
   , gn.gr_name
   , round(allow_margin_share/100 * gn.gr_margin , 2)
 from customers as cs
