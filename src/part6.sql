@@ -4,13 +4,11 @@ select
     m1.group_id
   , m1.sku_id
   , m1.sku_qty::numeric / m2.gr_qty as sku_share
-from (		
-		select group_id, sku_id
-		  , count(distinct transaction_id) as sku_qty
+from (	select group_id, sku_id, count(distinct transaction_id) as sku_qty
 		from main
-		  group by group_id, sku_id) as m1
-join (select group_id, count(distinct transaction_id) as gr_qty
-	  from main group by group_id) as m2
+		group by group_id, sku_id) as m1
+join (  select group_id, count(distinct transaction_id) as gr_qty
+	    from main group by group_id) as m2
   on m1.group_id = m2.group_id;
 
 
@@ -69,7 +67,9 @@ with step_one as (
 		  , s2.c_store
 		  , s2.sku_id
 		  , (s2.diff_price * allow_margin_share::numeric / 100) / s2.sku_retail_price as discount
-		  , p."Group_Min_Discount" + 0.05 as min_discount
+		  , case when round(p."Group_Min_Discount" / 0.05) * 0.05 < p."Group_Min_Discount"
+        		then round(p."Group_Min_Discount" / 0.05) * 0.05 + 0.05
+        		else round(p."Group_Min_Discount" / 0.05) * 0.05 end as min_discount
 		from step_two as s2
 		join periods as p
 		  on s2.customer_id = p."Customer_ID"
@@ -81,7 +81,7 @@ with step_one as (
 select
     customer_id
   , sku.sku_name
-  , min_discount * 100
+  , min_discount
 from step_three as s3
 join sku
   on sku.sku_id = s3.sku_id
