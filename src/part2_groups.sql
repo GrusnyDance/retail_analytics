@@ -3,7 +3,7 @@ create materialized view affinity_index as
 	select
 		 p."Customer_ID" as customer_id
 	   , p."Group_ID" as group_id
-	   , round((p."Group_Purchase"::numeric / count(*)), 2) as group_affinity_index
+	   , round((p."Group_Purchase"::numeric / count(distinct "Transaction_ID")), 2) as group_affinity_index
 	from periods as p
 	join purchase_history as ph
 	  on ph."Customer_ID" = p."Customer_ID"
