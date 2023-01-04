@@ -25,9 +25,11 @@ with group_name as (
 	from groups_view as gv
 	join groups_sku as gsku
 	  on gsku.group_id = gv."Group_ID"
-	where "Group_Churn_Rate" <= 10
-	  and "Group_Discount_Share" <  85::numeric/100
-	  and "Group_Margin" * 10::numeric/100 > "Group_Minimum_Discount"+0.05 )
+	where "Group_Churn_Rate" <= max_churn_index
+	  and "Group_Discount_Share" <  max_disc_share::numeric/100
+	  and "Group_Margin" * allow_margin_share::numeric/100 > (case when round(gv."Group_Minimum_Discount" / 0.05) * 0.05 < gv."Group_Minimum_Discount"
+                                      							then round(gv."Group_Minimum_Discount" / 0.05) * 0.05 + 0.05
+                                  								else round(gv."Group_Minimum_Discount" / 0.05) * 0.05 end) )
 select
     cs.customer_id
   , first_date
@@ -35,7 +37,9 @@ select
   , case when cs.customer_frequency = 0 then add_trans
       else (round(in_interv::numeric/cs.customer_frequency, 0) + add_trans) end
   , gn.gr_name
-  , (gn.depth_disc + 0.05) * 100
+  , case when round(gn.depth_disc / 0.05) * 0.05 < gn.depth_disc
+        then round(gn.depth_disc / 0.05) * 0.05 + 0.05
+        else round(gn.depth_disc / 0.05) * 0.05 end
 from customers as cs
   join group_name as gn
     on cs.customer_id = gn.customer_id;
