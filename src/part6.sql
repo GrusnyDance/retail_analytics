@@ -68,8 +68,8 @@ with step_one as (
 		  , s2.sku_id
 		  , (s2.diff_price * allow_margin_share::numeric / 100) / s2.sku_retail_price as discount
 		  , case when round(p."Group_Min_Discount" / 0.05) * 0.05 < p."Group_Min_Discount"
-        		then round(p."Group_Min_Discount" / 0.05) * 0.05 + 0.05
-        		else round(p."Group_Min_Discount" / 0.05) * 0.05 end as min_discount
+        		then (round(p."Group_Min_Discount" / 0.05) * 0.05 + 0.05)*100
+        		else (round(p."Group_Min_Discount" / 0.05) * 0.05)*100 end as min_discount
 		from step_two as s2
 		join periods as p
 		  on s2.customer_id = p."Customer_ID"

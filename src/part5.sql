@@ -38,8 +38,8 @@ select
       else (round(in_interv::numeric/cs.customer_frequency, 0) + add_trans) end
   , gn.gr_name
   , case when round(gn.depth_disc / 0.05) * 0.05 < gn.depth_disc
-        then round(gn.depth_disc / 0.05) * 0.05 + 0.05
-        else round(gn.depth_disc / 0.05) * 0.05 end
+        then (round(gn.depth_disc / 0.05) * 0.05 + 0.05) * 100
+        else (round(gn.depth_disc / 0.05) * 0.05) * 100 end
 from customers as cs
   join group_name as gn
     on cs.customer_id = gn.customer_id;
