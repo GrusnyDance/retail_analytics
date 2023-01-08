@@ -1,4 +1,3 @@
-
 /* Periods View */
 
 drop view if exists periods cascade;
