@@ -67,8 +67,8 @@ BEGIN
                                  , (s2.diff_price * allow_margin_share::numeric / 100) / s2.sku_retail_price AS discount
                                  , CASE
                                        WHEN ROUND(p."Group_Min_Discount" / 0.05) * 0.05 < p."Group_Min_Discount"
-                                           THEN (ROUND(p."Group_Min_Discount" / 0.05) * 0.05 + 0.05) * 100
-                                       ELSE (ROUND(p."Group_Min_Discount" / 0.05) * 0.05) * 100 END          AS min_discount
+                                           THEN (ROUND(p."Group_Min_Discount" / 0.05) * 0.05 + 0.05)
+                                       ELSE (ROUND(p."Group_Min_Discount" / 0.05) * 0.05) END          AS min_discount
                             FROM step_two AS s2
                                      JOIN periods AS p
                                           ON s2.customer_id = p."Customer_ID"
@@ -79,7 +79,7 @@ BEGIN
                             WHERE sku_share <= max_sku_share::numeric / 100)
         SELECT customer_id
              , sku.sku_name
-             , min_discount
+             , min_discount * 100
         FROM step_three AS s3
                  JOIN sku
                       ON sku.sku_id = s3.sku_id
