@@ -1,7 +1,7 @@
 SELECT * FROM pg_roles where left(rolname, 2) <> 'pg';
 
-DROP OWNED BY visitor;
-DROP ROLE if exists visitor;
+--DROP OWNED BY visitor;
+DROP ROLE IF EXISTS visitor;
 CREATE ROLE visitor WITH LOGIN
 NOSUPERUSER NOCREATEDB NOCREATEROLE;
 
@@ -13,8 +13,8 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO visitor;
 
-DROP OWNED BY administrator;
-DROP ROLE if exists administrator;
+--DROP OWNED BY administrator;
+DROP ROLE IF EXISTS administrator;
 CREATE ROLE administrator WITH LOGIN
 SUPERUSER;
 
