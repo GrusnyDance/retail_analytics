@@ -223,8 +223,8 @@ $$ LANGUAGE plpgsql;
 SELECT *
 FROM stores_cte();
 
-DROP MATERIALIZED VIEW IF EXISTS customers;
-CREATE MATERIALIZED VIEW customers AS
+DROP VIEW IF EXISTS customers;
+CREATE VIEW customers AS
 WITH main AS (SELECT ch.customer_id,
                      ch.customer_average_check,
                      ch.customer_average_check_segment,

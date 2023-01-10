@@ -4,98 +4,109 @@
 /* !!!!!!!!!!!!!!!!!!!BEFORE PROCEEDING WITH SCRIPT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    PLEASE CHANGE THE ABSOLUTE PATH TO FSV FILES (LINE 10) */
 ----------------------------------------------------------------------------------
-drop function if exists path_name();
-create function path_name() returns varchar as
+DROP FUNCTION IF EXISTS path_name();
+CREATE FUNCTION path_name() RETURNS varchar AS
 $$
-select '/home/natalia/School/SQL3_RetailAnalitycs_v1.0-0/';
-$$ language sql;
+SELECT '/home/darika/retail/';
+$$ LANGUAGE sql;
 
 
-drop table if exists personal_data, cards, transactions, groups_sku, 
-					date_of_analysis_formation, sku, checks, stores cascade;
+DROP TABLE IF EXISTS personal_data, cards, transactions, groups_sku,
+    date_of_analysis_formation, sku, checks, stores CASCADE;
 
-create table personal_data (
-    customer_id bigint primary key,
-	customer_name varchar check (customer_name ~ '^[A-ZА-Я][a-zа-яё -]+$'),
-	customer_surname varchar check (customer_surname ~ '^[A-ZА-Я][a-zа-яё -]+$'),
-	customer_primary_email varchar check (customer_primary_email ~ '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$'),
-	customer_primary_phone varchar check (customer_primary_phone ~ '^[+][7][0-9]{10}')
+CREATE TABLE personal_data
+(
+    customer_id            bigint PRIMARY KEY,
+    customer_name          varchar CHECK (customer_name ~ '^[A-ZА-Я][a-zа-яё -]+$'),
+    customer_surname       varchar CHECK (customer_surname ~ '^[A-ZА-Я][a-zа-яё -]+$'),
+    customer_primary_email varchar CHECK (customer_primary_email ~ '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$'),
+    customer_primary_phone varchar CHECK (customer_primary_phone ~ '^[+][7][0-9]{10}')
 );
 
-create table cards (
-    customer_card_id bigint primary key,
-	customer_id bigint not null references personal_data(customer_id)
+CREATE TABLE cards
+(
+    customer_card_id bigint PRIMARY KEY,
+    customer_id      bigint NOT NULL REFERENCES personal_data (customer_id)
 );
 
-create table groups_sku (
-    group_id bigint primary key,
-    group_name varchar check (group_name ~ '^[A-ZА-Яa-zа-яё0-9 -\[\]\\\^\$\.\|\?\*\+\(\)]+$')
+CREATE TABLE groups_sku
+(
+    group_id   bigint PRIMARY KEY,
+    group_name varchar CHECK (group_name ~ '^[A-ZА-Яa-zа-яё0-9 -\[\]\\\^\$\.\|\?\*\+\(\)]+$')
 );
 
-create table sku (
-    sku_id bigint primary key,
-	sku_name varchar check (sku_name ~ '^[A-ZА-Яa-zа-яё0-9 -\[\]\\\^\$\.\|\?\*\+\(\)]+$'),
-    group_id bigint not null references groups_sku(group_id)
+CREATE TABLE sku
+(
+    sku_id   bigint PRIMARY KEY,
+    sku_name varchar CHECK (sku_name ~ '^[A-ZА-Яa-zа-яё0-9 -\[\]\\\^\$\.\|\?\*\+\(\)]+$'),
+    group_id bigint NOT NULL REFERENCES groups_sku (group_id)
 );
 
-create table stores (
+CREATE TABLE stores
+(
     transaction_store_id bigint,
-	sku_id bigint references sku(sku_id),
-	sku_purchase_price numeric check (sku_purchase_price >= 0),
-	sku_retail_price numeric check (sku_retail_price >= 0)
+    sku_id               bigint REFERENCES sku (sku_id),
+    sku_purchase_price   numeric CHECK (sku_purchase_price >= 0),
+    sku_retail_price     numeric CHECK (sku_retail_price >= 0)
 );
 
-create table transactions (
-    transaction_id bigint primary key,
-	customer_card_id bigint references cards(customer_card_id),
-	transaction_summ numeric,
-	transaction_datetime timestamp,
+CREATE TABLE transactions
+(
+    transaction_id       bigint PRIMARY KEY,
+    customer_card_id     bigint REFERENCES cards (customer_card_id),
+    transaction_summ     numeric,
+    transaction_datetime timestamp,
     transaction_store_id bigint
 );
 
-create table checks (
-    transaction_id bigint not null references transactions(transaction_id),
-	sku_id bigint not null references sku(sku_id),
-	sku_amount numeric,
-	sku_summ numeric,
-	sku_summ_paid numeric,
-	sku_discount numeric
+CREATE TABLE checks
+(
+    transaction_id bigint NOT NULL REFERENCES transactions (transaction_id),
+    sku_id         bigint NOT NULL REFERENCES sku (sku_id),
+    sku_amount     numeric,
+    sku_summ       numeric,
+    sku_summ_paid  numeric,
+    sku_discount   numeric
 );
 
-create table date_of_analysis_formation (
+CREATE TABLE date_of_analysis_formation
+(
     analysis_formation timestamp
 );
 
-drop procedure if exists import_data(varchar, char);
-create procedure import_data(tablename varchar, delimeter char)
-as $$
-begin
-    execute format('COPY %s FROM %L DELIMITER %L CSV', tablename, 
-	(select path_name() ||'datasets/'|| tablename || '.tsv'), delimeter);
-end;
-$$ language plpgsql;
+DROP PROCEDURE IF EXISTS import_data(varchar, char);
+CREATE PROCEDURE import_data(tablename varchar, delimeter char)
+AS
+$$
+BEGIN
+    EXECUTE FORMAT('COPY %s FROM %L DELIMITER %L CSV', tablename,
+                   (SELECT path_name() || 'datasets/' || tablename || '.tsv'), delimeter);
+END;
+$$ LANGUAGE plpgsql;
 
-drop procedure if exists import_data_mini(varchar, char);
-create procedure import_data_mini(tablename varchar, delimeter char)
-as $$
-begin
-    execute format('COPY %s FROM %L DELIMITER %L CSV', tablename, 
-	(select path_name() ||'datasets/'|| tablename || '_Mini.tsv'), delimeter);
-end;
-$$ language plpgsql;
+DROP PROCEDURE IF EXISTS import_data_mini(varchar, char);
+CREATE PROCEDURE import_data_mini(tablename varchar, delimeter char)
+AS
+$$
+BEGIN
+    EXECUTE FORMAT('COPY %s FROM %L DELIMITER %L CSV', tablename,
+                   (SELECT path_name() || 'datasets/' || tablename || '_Mini.tsv'), delimeter);
+END;
+$$ LANGUAGE plpgsql;
 
-drop procedure if exists export_data(varchar, char);
-create procedure export_data(tablename varchar, delimeter char)
-as $$
-begin
-    execute format('COPY %s TO %L DELIMITER %L CSV HEADER', tablename, 
-	(select path_name() ||'src/export/'|| tablename || '.fsv'), delimeter);
-end;
-$$ language plpgsql;
+DROP PROCEDURE IF EXISTS export_data(varchar, char);
+CREATE PROCEDURE export_data(tablename varchar, delimeter char)
+AS
+$$
+BEGIN
+    EXECUTE FORMAT('COPY %s TO %L DELIMITER %L CSV HEADER', tablename,
+                   (SELECT path_name() || 'src/export/' || tablename || '.fsv'), delimeter);
+END;
+$$ LANGUAGE plpgsql;
 
 
-set datestyle to iso, DMY; 
-call import_data('Date_Of_Analysis_Formation', E'\t');
+SET datestyle TO iso, DMY;
+CALL import_data('Date_Of_Analysis_Formation', E'\t');
 
 /* import_mini */
 
@@ -109,21 +120,21 @@ call import_data('Date_Of_Analysis_Formation', E'\t');
 
 /* import */
 
-call import_data('Personal_Data', E'\t');
-call import_data('Cards', E'\t');
-call import_data('Transactions', E'\t');
-call import_data('Groups_SKU', E'\t');
-call import_data('SKU', E'\t');
-call import_data('Checks', E'\t');
-call import_data('Stores', E'\t');
+CALL import_data('Personal_Data', E'\t');
+CALL import_data('Cards', E'\t');
+CALL import_data('Transactions', E'\t');
+CALL import_data('Groups_SKU', E'\t');
+CALL import_data('SKU', E'\t');
+CALL import_data('Checks', E'\t');
+CALL import_data('Stores', E'\t');
 
 /* export */
 
-call export_data('personal_data', E'\t');
-call export_data('cards', E'\t');
-call export_data('transactions', E'\t');
-call export_data('groups_sku', E'\t');
-call export_data('sku', E'\t');
-call export_data('checks', E'\t');
-call export_data('stores', E'\t');
-call export_data('date_of_analysis_formation', E'\t');
+CALL export_data('personal_data', E'\t');
+CALL export_data('cards', E'\t');
+CALL export_data('transactions', E'\t');
+CALL export_data('groups_sku', E'\t');
+CALL export_data('sku', E'\t');
+CALL export_data('checks', E'\t');
+CALL export_data('stores', E'\t');
+CALL export_data('date_of_analysis_formation', E'\t');

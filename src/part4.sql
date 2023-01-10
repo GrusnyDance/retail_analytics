@@ -82,7 +82,7 @@ BEGIN
                              grv."Group_Minimum_Discount",
                              ROW_NUMBER()
                              OVER (PARTITION BY grv."Customer_ID" ORDER BY grv."Group_Affinity_Index" DESC) AS check_priority
-                      FROM groups_view grv
+                      FROM groups grv
                       WHERE grv."Group_Churn_Rate" <= max_churn                        --max_churn
                         AND grv."Group_Discount_Share" < max_transitions_with_discount --max_transitions_with_discount;
                       ORDER BY 1),
@@ -140,7 +140,7 @@ BEGIN
             SELECT q1.customer_id,
                    q1.required_check_measure,
                    q2.group_name,
-                   q2.offer_discount_depth
+                   round(q2.offer_discount_depth * 100) as offer_discount_depth
             FROM (SELECT *
                   FROM average_period(first_date, last_date, koeff_up)) q1
                      JOIN (SELECT * FROM best_group(max_churn, max_transitions_with_discount, max_margin_share)) q2
@@ -150,7 +150,7 @@ BEGIN
             SELECT q1.customer_id,
                    q1.required_check_measure,
                    q2.group_name,
-                   q2.offer_discount_depth
+                   round(q2.offer_discount_depth * 100) as offer_discount_depth
             FROM (SELECT *
                   FROM average_count(transactions_num, koeff_up)) q1
                      JOIN (SELECT * FROM best_group(max_churn, max_transitions_with_discount, max_margin_share)) q2
