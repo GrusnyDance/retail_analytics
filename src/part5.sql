@@ -4,7 +4,7 @@ CREATE FUNCTION frequency_of_visits(first_date timestamp DEFAULT '2023-02-01 08:
                                     add_trans bigint DEFAULT 10,
                                     max_churn_index numeric DEFAULT 10,
                                     max_disc_share numeric DEFAULT 85,
-                                    allow_margin_share numeric DEFAULT 10)
+                                    allow_margin_share numeric DEFAULT 50)
     RETURNS table
             (
                 "Customer_ID"                 bigint,
